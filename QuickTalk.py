@@ -325,17 +325,21 @@ class QuickTalk_Script:
       currentDialogue = {}
       currentDialogue['voice'] = currentVoice;
       currentDialogue['lines'] = []
+      currentDialogue['totalwords'] = 0
+      numWords=0
       for l in self.lines:
         match = re.search("^([A-Za-z]*):",l)
         if(match):
           #Change voice
           currentVoice = match.group(1).lower()
+          self.voices[currentVoice] = True
           if(len(currentDialogue['lines'])>0):
             self.dialogues.append(currentDialogue)
           currentDialogue = {}
           currentDialogue['voice'] = currentVoice;
           currentDialogue['lines'] = []
-          self.voices[currentVoice] = True
+          currentDialogue['totalwords'] = 0
+          numWords=0
         else:
           #Dialogue line
           words = l.split()
@@ -344,22 +348,64 @@ class QuickTalk_Script:
             for w in words:
               w = re.sub('[\W_]+', '', w).lower()     #Remove non alphanumerics
               currentLine.append(w)
+              currentDialogue['totalwords'] = currentDialogue['totalwords'] + 1
             currentDialogue['lines'].append(currentLine)
-            
-        
+
+      if(len(currentDialogue['lines'])>0):
+        self.dialogues.append(currentDialogue)
+      self.dumpScript()
+  ###
+  # Get total number of words in this script
+  # 
+  def getTotalWords(self):
+      total = 0
+      for d in self.dialogues:
+        total = total + d['totalwords']
+      return total
+
+  ###
+  # Add the dialogue markers
+  #
+  def addDialogueMarkers(self):
+      numFrames = bpy.context.scene.frame_end - bpy.context.scene.frame_start + 1
+      numWords = self.getTotalWords()
+      framesPerWord = numFrames/numWords
+      print("Frames Per Word:"+str(framesPerWord)+" ("+str(numFrames)+"/"+str(numWords)+")")
+
+      #Switch to a timeline
+      default_frame = bpy.context.scene.frame_current
+      default_area = bpy.context.area.type
+      bpy.context.area.type = ('TIMELINE')
+
+      #Add some markers
+      frame = bpy.context.scene.frame_start
+      for d in self.dialogues:
+        bpy.context.scene.frame_current = frame
+        marker = bpy.ops.marker.add()
+        bpy.ops.marker.rename(name=d['voice']+"!D")
+        print("Adding "+d['voice']+" at "+str(frame))
+        frame = frame + framesPerWord*d['totalwords']
+
+      bpy.context.scene.frame_current = default_frame
+      bpy.context.area.type = default_area
+
+    
+          
 
 
   ###
   # Debug function to dump script to stdout
-  def printScript(self):
+  # 
+  def dumpScript(self):
       for d in self.dialogues:
+        print("Dialogue - "+d['voice']+" - "+str(d['totalwords'])+" words:")
         for l in d['lines']:
-          print(d['voice']+": ",end="")
+          print("     ",end="")
           for w in l:
             print(w,end=" ")
           print()
           
-
+#end class script
 
 
 
@@ -374,11 +420,8 @@ class QuickTalk_GuessDialogue(bpy.types.Operator):
 
     def execute(self, context):
         script = QuickTalk_Script(context.scene.quicktalk_script_file)
-        script.printScript()
-        if(script.parsed!="okay"):
-          self.report({"ERROR"},"Can't find parent armature to add bones");
-          return {"CANCELLED"}
-          
+        script.addDialogueMarkers()
+        
         return {'FINISHED'}
 
 
