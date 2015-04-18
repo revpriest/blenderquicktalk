@@ -116,6 +116,8 @@ def register():
     bpy.utils.register_class(QuickTalk_AddQuicktalkPanel)
     bpy.utils.register_class(QuickTalk_BuildShapeKeyPanel)
     bpy.utils.register_class(QuickTalk_GuessDialogue)
+    bpy.utils.register_class(QuickTalk_GuessLines)
+    bpy.utils.register_class(QuickTalk_GuessWords)
     bpy.types.Scene.quicktalk_script_file = bpy.props.StringProperty (
       name = "Script File",
       default = "",
@@ -131,6 +133,8 @@ def unregister():
     bpy.utils.unregister_class(QuickTalk_AddQuicktalkPanel)
     bpy.utils.unregister_class(QuickTalk_BuildShapeKeyPanel)
     bpy.utils.unregister_class(QuickTalk_GuessDialogue)
+    bpy.utils.unregister_class(QuickTalk_GuessLines)
+    bpy.utils.unregister_class(QuickTalk_GuessWords)
     del bpy.types.Scene.quicktalk_script_file
 
 
@@ -150,8 +154,8 @@ class QuickTalk_AddQuicktalkPanel(bpy.types.Panel):
         TheCol.operator("object.quicktalk_addpanel", text="Build Shape-Key Panel Armature")
         TheCol.prop(context.scene, "quicktalk_script_file")
         TheCol.operator("object.quicktalk_guess_dialogue", text="Guess Dialogue Markers")
-        TheCol.operator("object.quicktalk_guess_dialogue", text="Guess Line Markers")
-        TheCol.operator("object.quicktalk_guess_dialogue", text="Guess Word Markers")
+        TheCol.operator("object.quicktalk_guess_lines", text="Guess Line Markers")
+        TheCol.operator("object.quicktalk_guess_words", text="Guess Word Markers")
         TheCol.operator("object.quicktalk_guess_dialogue", text="Quicktalk Plot")
 
 
@@ -389,7 +393,99 @@ class QuickTalk_Script:
       bpy.context.scene.frame_current = default_frame
       bpy.context.area.type = default_area
 
+
+  ###
+  # Add the line markers
+  # Note: We can only have one marker per frame, so
+  # we can't add in the first line from each dialogue.
+  #
+  def addLineMarkers(self):
+      #Switch to a timeline
+      default_frame = bpy.context.scene.frame_current
+      default_area = bpy.context.area.type
+      bpy.context.area.type = ('TIMELINE')
+
+      #Find the dialogue markers
+      dialogueStarts = []
+      for m in bpy.context.scene.timeline_markers:
+        if(m.name[-2:]=="!D"):
+          frame = m.frame
+          dialogueStarts.append(frame)
+          print(m.name+":"+str(frame))
+      dialogueStarts.append(bpy.context.scene.frame_end)  #Fake one at the end of the scene
+      dialogueStarts = sorted(dialogueStarts)
+
+      #Add line markers for each dialogue
+      n=0;
+      for d in self.dialogues:
+        frame = dialogueStarts[n];
+        start = dialogueStarts[n]
+        n+=1
+        end = dialogueStarts[n]
+        framesPerWord = (end-start) / d['totalwords']
+
+        ln = 0
+        for l in d['lines']:
+            ln=ln+1
+            if(ln>1):
+              bpy.context.scene.frame_current = frame
+              marker = bpy.ops.marker.add()
+              name=l[0][0:10]+"!L"
+              bpy.ops.marker.rename(name=name)
+              print("Adding "+name+" at "+str(frame))
+            frame = frame + framesPerWord*len(l)
+           
+     
+
+      bpy.context.scene.frame_current = default_frame
+      bpy.context.area.type = default_area
+
     
+  ###
+  # Add the word markers
+  # Note: We can only have one marker per frame, so
+  # we can't add in the first word from each line.
+  #
+  def addWordMarkers(self):
+      #Switch to a timeline
+      default_frame = bpy.context.scene.frame_current
+      default_area = bpy.context.area.type
+      bpy.context.area.type = ('TIMELINE')
+
+      #Find the existing markers
+      lineStarts = []
+      for m in bpy.context.scene.timeline_markers:
+        if((m.name[-2:]=="!D") or (m.name[-2:]=="!L")):
+          frame = m.frame
+          lineStarts.append(frame)
+          print(m.name+":"+str(frame))
+      lineStarts.append(bpy.context.scene.frame_end)  #Fake one at the end of the scene
+      lineStarts = sorted(lineStarts)
+
+      #Add word markers for each line
+      n=0;
+      for d in self.dialogues:
+        for l in d['lines']:
+          frame = lineStarts[n];
+          start = lineStarts[n]
+          n+=1
+          end = lineStarts[n]
+          framesPerWord = (end-start) / len(l)
+
+          wn = 0
+          for w in l:
+            wn=wn+1
+            if(wn>1):
+              bpy.context.scene.frame_current = frame
+              marker = bpy.ops.marker.add()
+              name=w[0:10]+"!W"
+              bpy.ops.marker.rename(name=name)
+              print("Adding "+name+" at "+str(frame))
+            frame = frame + framesPerWord
+
+      bpy.context.scene.frame_current = default_frame
+      bpy.context.area.type = default_area
+
           
 
 
@@ -424,5 +520,35 @@ class QuickTalk_GuessDialogue(bpy.types.Operator):
         
         return {'FINISHED'}
 
+###
+# The Guess Line Markers Function
+#
+class QuickTalk_GuessLines(bpy.types.Operator):
+    """Guess Quicktalk Line Markers"""         # blender will use this as a tooltip for menu items and buttons.
+    bl_idname = "object.quicktalk_guess_lines" # unique identifier for buttons and menu items to reference.
+    bl_label = "Guess Line Start Markers"  # display name in the interface.
+    bl_options = {'REGISTER', 'UNDO'}          # enable undo for the operator.
+
+    def execute(self, context):
+        script = QuickTalk_Script(context.scene.quicktalk_script_file)
+        script.addLineMarkers()
+        
+        return {'FINISHED'}
+
+
+###
+# The Guess Word Markers Function
+#
+class QuickTalk_GuessWords(bpy.types.Operator):
+    """Guess Quicktalk Word Markers"""         # blender will use this as a tooltip for menu items and buttons.
+    bl_idname = "object.quicktalk_guess_words" # unique identifier for buttons and menu items to reference.
+    bl_label = "Guess Word Start Markers"  # display name in the interface.
+    bl_options = {'REGISTER', 'UNDO'}          # enable undo for the operator.
+
+    def execute(self, context):
+        script = QuickTalk_Script(context.scene.quicktalk_script_file)
+        script.addWordMarkers()
+        
+        return {'FINISHED'}
 
 
