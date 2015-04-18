@@ -124,6 +124,12 @@ def register():
       description = "Where is the file defining the script?",
       subtype = 'FILE_PATH'
     )
+    bpy.types.Scene.quicktalk_dict_file = bpy.props.StringProperty (
+      name = "Dictionary File",
+      default = "",
+      description = "Where is the file defining the phoneme dictionary?",
+      subtype = 'FILE_PATH'
+    )
 
 
 ###
@@ -136,6 +142,7 @@ def unregister():
     bpy.utils.unregister_class(QuickTalk_GuessLines)
     bpy.utils.unregister_class(QuickTalk_GuessWords)
     del bpy.types.Scene.quicktalk_script_file
+    del bpy.types.Scene.quicktalk_dict_file
 
 
 ###
@@ -156,6 +163,7 @@ class QuickTalk_AddQuicktalkPanel(bpy.types.Panel):
         TheCol.operator("object.quicktalk_guess_dialogue", text="Guess Dialogue Markers")
         TheCol.operator("object.quicktalk_guess_lines", text="Guess Line Markers")
         TheCol.operator("object.quicktalk_guess_words", text="Guess Word Markers")
+        TheCol.prop(context.scene, "quicktalk_dict_file")
         TheCol.operator("object.quicktalk_guess_dialogue", text="Quicktalk Plot")
 
 
