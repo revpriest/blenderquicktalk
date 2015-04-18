@@ -118,6 +118,7 @@ def register():
     bpy.utils.register_class(QuickTalk_GuessDialogue)
     bpy.utils.register_class(QuickTalk_GuessLines)
     bpy.utils.register_class(QuickTalk_GuessWords)
+    bpy.utils.register_class(QuickTalk_QuicktalkPlot)
     bpy.types.Scene.quicktalk_script_file = bpy.props.StringProperty (
       name = "Script File",
       default = "",
@@ -141,6 +142,7 @@ def unregister():
     bpy.utils.unregister_class(QuickTalk_GuessDialogue)
     bpy.utils.unregister_class(QuickTalk_GuessLines)
     bpy.utils.unregister_class(QuickTalk_GuessWords)
+    bpy.utils.unregister_class(QuickTalk_QuicktalkPlot)
     del bpy.types.Scene.quicktalk_script_file
     del bpy.types.Scene.quicktalk_dict_file
 
@@ -164,7 +166,7 @@ class QuickTalk_AddQuicktalkPanel(bpy.types.Panel):
         TheCol.operator("object.quicktalk_guess_lines", text="Guess Line Markers")
         TheCol.operator("object.quicktalk_guess_words", text="Guess Word Markers")
         TheCol.prop(context.scene, "quicktalk_dict_file")
-        TheCol.operator("object.quicktalk_guess_dialogue", text="Quicktalk Plot")
+        TheCol.operator("object.quicktalk_plot_timeline", text="Quicktalk Plot")
 
 
 ###
@@ -320,6 +322,8 @@ class QuickTalk_BuildShapeKeyPanel(bpy.types.Operator):
 # Class for script-manipulating functions
 #
 class QuickTalk_Script:
+
+  phoneme_dictionary = {}
 
   ###
   # Load the script at init
@@ -494,7 +498,185 @@ class QuickTalk_Script:
       bpy.context.scene.frame_current = default_frame
       bpy.context.area.type = default_area
 
-          
+
+  ###
+  # Load Dictionary Function is mostly ripped out
+  # of the Papagayo source code
+  def LoadDictionary(self):
+      mappings = {
+        "AA0":"AI",
+        "AA1":"AI",
+        "AA2":"AI",
+        "AE0":"AI",
+        "AE1":"AI",
+        "AE2":"AI",
+        "AH0":"AI",
+        "AH1":"AI",
+        "AH2":"AI",
+        "AO0":"O",
+        "AO1":"O",
+        "AO2":"O",
+        "AW0":"O",
+        "AW1":"O",
+        "AW2":"O",
+        "AY0":"AI",
+        "AY1":"AI",
+        "AY2":"AI",
+        "B":"MBP",
+        "CH":"ETC",
+        "D":"ETC",
+        "DH":"ETC",
+        "EH0":"E",
+        "EH1":"E",
+        "EH2":"E",
+        "ER0":"E",
+        "ER1":"E",
+        "ER2":"E",
+        "EY0":"E",
+        "EY1":"E",
+        "EY2":"E",
+        "F":"FV",
+        "G":"ETC",
+        "HH":"ETC",
+        "IH0":"AI",
+        "IH1":"AI",
+        "IH2":"AI",
+        "IY0":"E",
+        "IY1":"E",
+        "IY2":"E",
+        "JH":"ETC",
+        "K":"ETC",
+        "L":"L",
+        "M":"MBP",
+        "N":"ETC",
+        "NG":"ETC",
+        "OW0":"O",
+        "OW1":"O",
+        "OW2":"O",
+        "OY0":"WQ",
+        "OY1":"WQ",
+        "OY2":"WQ",
+        "P":"MBP",
+        "R":"ETC",
+        "S":"ETC",
+        "SH":"ETC",
+        "T":"ETC",
+        "TH":"ETC",
+        "UH0":"U",
+        "UH1":"U",
+        "UH2":"U",
+        "UW0":"U",
+        "UW1":"U",
+        "UW2":"U",
+        "V":"FV",
+        "W":"WQ",
+        "Y":"ETC",
+        "Z":"ETC",
+        "ZH":"ETC",
+        "E21":"E",
+      }
+
+
+      inFile = open(bpy.path.abspath(bpy.context.scene.quicktalk_dict_file), 'r')
+
+      for line in inFile.readlines():
+        if line[0] == '#':
+          continue # skip comments in the dictionary
+        # strip out leading/trailing whitespace
+        line.strip()
+        line = line.rstrip('\r\n')
+
+        # split into components
+        entry = line.split()
+        if len(entry) == 0:
+          continue
+        # Ditch dules that have (xx) after 'en
+        if entry[0].endswith(')'):
+          continue
+        # add this entry to the in-memory dictionary
+        for i in range(len(entry)):
+          name = entry[0]
+          name = re.sub('[\W_]+', '', name).lower()     #Remove non alphanumerics
+          if i == 0:
+            self.phoneme_dictionary[name] = []
+          else:
+            rawentry = entry[i]
+            try:
+              entry[i] = entry[i]
+            except:
+              print("Unknown phoneme:", entry[i], "in word:", entry[0])
+            self.phoneme_dictionary[name].append(mappings[entry[i]])
+      inFile.close()
+      inFile = None
+
+
+  ###
+  # Plot a single dot on a timeline
+  #
+  def plotDot(self,name,value,frame):
+      print("Plotting "+name+" at "+str(value)+" to "+str(frame))
+
+  ###
+  # Plot a single phoneme to the timeline
+  #
+  def plotPhoneme(self,p,last,start,step):
+    if(p!=last):
+      ##Only turn it down if it wasn't the last phoneme
+      self.plotDot(p,0,int(start))
+    self.plotDot(p,1.571,int(start+step))
+    self.plotDot(p,0,int(start+step+step))
+
+  ###
+  # Plot a specific word at a specific place
+  #
+  def plotWordToTimeline(self,w,frame,length):
+      phonemes = self.phoneme_dictionary[w.lower()] 
+      if(length > len(phonemes) * 10):
+        #Obviously this word has a gap after it, fix the length lower
+        length = len(phonemes) * 3;
+   
+      step = length/len(phonemes)
+      current = frame-step/2
+      lastPhoneme = "non"
+      for p in phonemes:
+        self.plotPhoneme(p,lastPhoneme,current,step)
+        lastPhoneme = p
+        current = current+step
+            
+ 
+
+  ###
+  # Plot the phonemes to the timeline.
+  #
+  def plotTimelines(self):
+      #Switch to a timeline
+      default_frame = bpy.context.scene.frame_current
+      default_area = bpy.context.area.type
+      bpy.context.area.type = ('TIMELINE')
+
+      #Find the word-start markers
+      wordStarts = []
+      for m in bpy.context.scene.timeline_markers:
+        if((m.name[-2:]=="!D") or (m.name[-2:]=="!L") or (m.name[-2:]=="!W")):
+          frame = m.frame
+          wordStarts.append(frame)
+          print(m.name+":"+str(frame))
+      wordStarts.append(bpy.context.scene.frame_end)  #Fake one at the end of the scene
+      wordStarts = sorted(wordStarts)
+
+      #Add the actual plots
+      n=0;
+      for d in self.dialogues:
+        for l in d['lines']:
+          for w in l:
+            startFrame = wordStarts[n]
+            n=n+1
+            endFrame = wordStarts[n]
+            self.plotWordToTimeline(w,startFrame,endFrame-startFrame)
+
+      bpy.context.scene.frame_current = default_frame
+      bpy.context.area.type = default_area
+
 
 
   ###
@@ -559,4 +741,19 @@ class QuickTalk_GuessWords(bpy.types.Operator):
         
         return {'FINISHED'}
 
+###
+# The Actual Plotting of data to timelines! Finally!
+#
+class QuickTalk_QuicktalkPlot(bpy.types.Operator):
+    """Plot Quicktalk data to timeline"""         # blender will use this as a tooltip for menu items and buttons.
+    bl_idname = "object.quicktalk_plot_timeline"   # unique identifier for buttons and menu items to reference.
+    bl_label = "Plot Quicktalk Data To Timeline"  # display name in the interface.
+    bl_options = {'REGISTER', 'UNDO'}          # enable undo for the operator.
+
+    def execute(self, context):
+        script = QuickTalk_Script(context.scene.quicktalk_script_file)
+        script.LoadDictionary()
+        script.plotTimelines()
+        
+        return {'FINISHED'}
 
