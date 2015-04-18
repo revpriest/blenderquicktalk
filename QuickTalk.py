@@ -171,35 +171,28 @@ class QuickTalk_BuildShapeKeyPanel(bpy.types.Operator):
     # We arrange the levers in the panel in a spiral
     # so that we can add more at any point and still
     # have close-as-possible to a square
+    # Mat Taylor found a better way than my first 
+    # effort.....
     #
     def getXYSpiral(self,i):
-        x=0
-        y=0
-        direction=1
-        count=1
-        step=1
-        halves=1
-        while(i>1):
-          if(direction==1):
-            x = x + 1
-          if(direction==2):
-            y = y + 1
-          if(direction==3):
-            x = x - 1
-          if(direction==4):
-            y = y - 1
-          count = count-1
-          if(count<=0):
-            if(halves==2):
-              halves=0
-              step = step+1
-            halves = halves+1
-            count=step
-            direction = direction+1
-            if(direction>4):
-              direction=1
-          i = i-1 
-        return(x,y) 
+        n = math.floor(math.sqrt(i))
+        d = i - n*n
+        if(n & 1):
+          x = (n+1)/2
+          y = (n+1)/2
+          if(d<n):
+            y=y+d-n
+          elif(d>n):
+            x=x-d+n
+        else:
+          x = n/2-n
+          y = n/2-n
+          if(d<n):
+            y=y-d+n
+          elif(d>n):
+            x=x+d-n
+        return (x,y)
+
 
     ###
     # Function to add a driver to a shapekey and attach to a bone.
@@ -286,7 +279,7 @@ class QuickTalk_BuildShapeKeyPanel(bpy.types.Operator):
 
         #Add bone for every shape-key...
         shapeKeys = shapeObj.data.shape_keys.key_blocks
-        num = 1;
+        num = 0;
         for key in shapeKeys:
             if(key.name!="Basis"):
               self.addPanelBone(arm,panelroot,key.name,num)
