@@ -1,6 +1,9 @@
 "Quicktalk" is a plugin for Blender which tries to do most of
 the dull boring work for lip-synch for a character.
 
+There's a video tutorial on the addon's website here:
+http://tentacles.org.uk/quicktalk
+
 First, make shape keys for the mouth shapes.
 You'll need: AI, E, O, U, FV, L, MBP, WQ, ETC and the 
 Basis should be a rest shape.
