@@ -277,9 +277,9 @@ class QuickTalk_BuildShapeKeyPanel(bpy.types.Operator):
         x = scene.cursor_location[0]; 
         y = scene.cursor_location[1]; 
         z = scene.cursor_location[2]; 
-        x = x-armObj.location[0];
-        y = y-armObj.location[1];
-        z = z-armObj.location[2];
+        x = (x-armObj.location[0])/armObj.scale[0];
+        y = (y-armObj.location[1])/armObj.scale[1];
+        z = (z-armObj.location[2])/armObj.scale[2];
 
         #Select the armature, go to edit mode
         scene.objects.active = armObj
@@ -291,11 +291,11 @@ class QuickTalk_BuildShapeKeyPanel(bpy.types.Operator):
         panelroot.head = (x,y,z)
         panelroot.tail = (x,y+1,z)
 
-        #Add bone for every shape-key...
+        #Add bone for every shape-key, except those starting with !
         shapeKeys = shapeObj.data.shape_keys.key_blocks
         num = 0;
         for key in shapeKeys:
-            if(key.name!="Basis"):
+            if((key.name!="Basis") and (key.name[0:1]!="!")):
               self.addPanelBone(arm,panelroot,key.name,num)
               num=num+1
 
@@ -303,12 +303,12 @@ class QuickTalk_BuildShapeKeyPanel(bpy.types.Operator):
         bpy.ops.object.mode_set(mode='POSE') 
         pose = armObj.pose
         for key in shapeKeys:
-            if(key.name!="Basis"):
+            if((key.name!="Basis") and (key.name[0:1]!="!")):
               self.setBoneLimits(pose.bones[key.name])
 
         #Add drivers to the all the shape keys
         for key in shapeKeys:
-            if(key.name!="Basis"):
+            if((key.name!="Basis") and (key.name[0:1]!="!")):
               self.addDriver(key,key.name,armObj,pose.bones[key.name])
         
         #Restore the mode to how it was when we started.
@@ -614,7 +614,13 @@ class QuickTalk_Script:
   # Plot a single dot on a timeline
   #
   def plotDot(self,name,value,frame):
-      print("Plotting "+name+" at "+str(value)+" to "+str(frame))
+    if name in bpy.context.active_object.pose.bones:
+      bone = bpy.context.active_object.pose.bones[name]
+      bone.rotation_euler = (value,0,0)
+      bone.keyframe_insert("rotation_euler",0,frame,"QuickTalk")        #0=x, 1=y, 2=z
+      print("Plottted "+name+" at "+str(value)+" to "+str(frame))
+    else:
+      print("Can't find bone to plot "+name+" at "+str(value)+" to "+str(frame))
 
   ###
   # Plot a single phoneme to the timeline
@@ -631,7 +637,7 @@ class QuickTalk_Script:
   #
   def plotWordToTimeline(self,w,frame,length):
       phonemes = self.phoneme_dictionary[w.lower()] 
-      if(length > len(phonemes) * 10):
+      if(length > len(phonemes) * 5):
         #Obviously this word has a gap after it, fix the length lower
         length = len(phonemes) * 3;
    
@@ -643,7 +649,6 @@ class QuickTalk_Script:
         lastPhoneme = p
         current = current+step
             
- 
 
   ###
   # Plot the phonemes to the timeline.
@@ -665,14 +670,18 @@ class QuickTalk_Script:
       wordStarts = sorted(wordStarts)
 
       #Add the actual plots
+      selectedobjectname = bpy.context.active_object.name.lower()
       n=0;
       for d in self.dialogues:
-        for l in d['lines']:
-          for w in l:
-            startFrame = wordStarts[n]
-            n=n+1
-            endFrame = wordStarts[n]
-            self.plotWordToTimeline(w,startFrame,endFrame-startFrame)
+          for l in d['lines']:
+            for w in l:
+              startFrame = wordStarts[n]
+              n=n+1
+              endFrame = wordStarts[n]
+              if selectedobjectname[0:len(d['voice'])] == d['voice']:
+                self.plotWordToTimeline(w,startFrame,endFrame-startFrame)
+              else:
+                print("Non-Matching character: "+selectedobjectname[0:len(d['voice'])]+":"+d['voice'])
 
       bpy.context.scene.frame_current = default_frame
       bpy.context.area.type = default_area
