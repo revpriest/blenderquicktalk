@@ -62,6 +62,16 @@ There's more chance this will be more or less
 right but still not much chance so fix 'em.
 Word markers end in "!W"
 
+Next you need to pick a dictionary that describes
+which phonemes correspond to which words. You can
+find a dictionary at the The CMU Pronouncing project
+here:
+
+http://www.speech.cs.cmu.edu/cgi-bin/cmudict
+
+Once you've downloaded a dictionary, click the
+browse button to tell the plugin where that is
+
 Select an armature and click "QuickTalk Plot"
 This will create f-curves for the scene which
 change the x-rotation of the bones created in
@@ -74,3 +84,4 @@ the f-curve to match.
 If all that sounds long-winded, you do not understand
 how damn tedious lip-synching is when you have
 to do it literally frame by frame. 
+
