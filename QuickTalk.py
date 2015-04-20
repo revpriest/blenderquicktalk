@@ -94,7 +94,7 @@
 bl_info = {
     "name": "QuickTalk Lipsyncher",
     "author": "Adam Priest - tentacles.org.uk ;)",
-    "version": (0, 0, 0),
+    "version": (0, 0, 2),
     "blender": (2, 7, 1),
     "location": "Object Panel",
     "description": "A system for speeding up lip synch stuff by using markers and a phoneme dictionary",
@@ -131,6 +131,13 @@ def register():
       description = "Where is the file defining the phoneme dictionary?",
       subtype = 'FILE_PATH'
     )
+    bpy.types.Scene.quicktalk_bone_option = bpy.props.EnumProperty (
+      items = (('0', 'X-Rotation', 'Create and move bones for X-Rotation'),    
+               ('1', 'X-Translation', 'Create and move bones for X-Translation')),
+      name = "Bone Option",
+      default = "0",
+      description = "Move/Make bones with rotation or translation?"
+    )
 
 
 ###
@@ -144,7 +151,8 @@ def unregister():
     bpy.utils.unregister_class(QuickTalk_GuessWords)
     bpy.utils.unregister_class(QuickTalk_QuicktalkPlot)
     del bpy.types.Scene.quicktalk_script_file
-    del bpy.types.Scene.quicktalk_dict_file
+    del bpy.types.Scene.quicktalk_dict_file 
+    del bpy.types.Scene.quicktalk_bone_option
 
 
 ###
@@ -160,6 +168,7 @@ class QuickTalk_AddQuicktalkPanel(bpy.types.Panel):
  
     def draw(self, context):
         TheCol = self.layout.column(align=True)
+        TheCol.prop(context.scene, "quicktalk_bone_option")
         TheCol.operator("object.quicktalk_addpanel", text="Build Shape-Key Panel Armature")
         TheCol.prop(context.scene, "quicktalk_script_file")
         TheCol.operator("object.quicktalk_guess_dialogue", text="Guess Dialogue Markers")
@@ -205,7 +214,7 @@ class QuickTalk_BuildShapeKeyPanel(bpy.types.Operator):
             y=y-d+n
           elif(d>n):
             x=x+d-n
-        return (x,y)
+        return (x*1.2,y*1.2)
 
 
     ###
@@ -214,14 +223,22 @@ class QuickTalk_BuildShapeKeyPanel(bpy.types.Operator):
     def addDriver(self,shapekey,name,destObj,bone):
         driver = shapekey.driver_add("value") 
         driver.driver.type = "SCRIPTED"
-        driver.driver.expression = "val/1.571"  #90 degrees is 1.571 radians
+        if(bpy.context.scene.quicktalk_bone_option == "0"):
+          driver.driver.expression = "val/1.571"  #90 degrees is 1.571 radians
+        else:
+          driver.driver.expression = "val"
+        
         val = driver.driver.variables.new()
         val.name = "val" 
         val.type = 'TRANSFORMS'
         val.targets[0].id = destObj
         val.targets[0].bone_target = name
-        val.targets[0].transform_type = 'ROT_X'
         val.targets[0].transform_space = 'LOCAL_SPACE'
+        if(bpy.context.scene.quicktalk_bone_option == "0"):
+          val.targets[0].transform_type = 'ROT_X'
+        else:
+          val.targets[0].transform_type = 'LOC_X'
+        
 
     ###
     # Function to add a bone to the armature's control panel
@@ -231,7 +248,11 @@ class QuickTalk_BuildShapeKeyPanel(bpy.types.Operator):
         editbone = arm.edit_bones.new(name)
         editbone.parent = parent
         editbone.head = (parent.head[0]+x,    parent.head[1],parent.head[2]+z)
-        editbone.tail = (parent.head[0]+x+0.9,parent.head[1],parent.head[2]+z)
+        if(bpy.context.scene.quicktalk_bone_option == "0"):
+          editbone.tail = (parent.head[0]+x+0.9,parent.head[1],parent.head[2]+z)
+        else:
+          editbone.tail = (parent.head[0]+x,parent.head[1],parent.head[2]+z-0.8)
+        
         return editbone
 
 
@@ -241,17 +262,36 @@ class QuickTalk_BuildShapeKeyPanel(bpy.types.Operator):
     #
     def setBoneLimits(self,bone):
         bone.rotation_mode = "XYZ"
-        bone.lock_rotation = (False, True, True)
-        con = bone.constraints.new("LIMIT_ROTATION");
-        con.use_limit_x = True;
-        con.min_x = 0;
-        con.max_x = math.pi/2;
-        con.min_y = 0;
-        con.max_y = 0;
-        con.use_limit_y = True;
-        con.use_limit_z = True;
-        con.min_z = -math.pi/2;
-        con.max_z = -math.pi/2;
+        bone.lock_rotation = (True , True, True)
+        bone.lock_location = (True , True, True)
+        if(bpy.context.scene.quicktalk_bone_option == "0"):
+          bone.lock_rotation = (False, True, True)
+          con = bone.constraints.new("LIMIT_ROTATION");
+          con.use_limit_x = True
+          con.use_limit_y = True
+          con.use_limit_z = True
+          con.min_x = 0
+          con.max_x = 1.571
+          con.min_y = 0
+          con.max_y = 0
+          con.min_z = 0
+          con.max_z = 0
+        else:
+          bone.lock_location = (False, True, True)
+          con = bone.constraints.new("LIMIT_LOCATION");
+          con.min_z = 0
+          con.max_z = 0
+          con.max_x = 1
+          con.use_min_x = True
+          con.use_max_x = True
+          con.use_min_y = True
+          con.use_max_y = True
+          con.use_min_z = True
+          con.use_max_z = True
+          con.min_x = 0
+          con.min_y = 0
+          con.max_y = 0
+        con.owner_space= "LOCAL"
 
 
     ###
@@ -295,7 +335,7 @@ class QuickTalk_BuildShapeKeyPanel(bpy.types.Operator):
         shapeKeys = shapeObj.data.shape_keys.key_blocks
         num = 0;
         for key in shapeKeys:
-            if((key.name!="Basis") and (key.name[0:1]!="!")):
+            if((key.name[0:3]=="qt_") or (key.name in ["AI","O","E","U","ETC","L","WQ","MBP","FV"])):
               self.addPanelBone(arm,panelroot,key.name,num)
               num=num+1
 
@@ -303,12 +343,12 @@ class QuickTalk_BuildShapeKeyPanel(bpy.types.Operator):
         bpy.ops.object.mode_set(mode='POSE') 
         pose = armObj.pose
         for key in shapeKeys:
-            if((key.name!="Basis") and (key.name[0:1]!="!")):
+            if((key.name[0:3]=="qt_") or (key.name in ["AI","O","E","U","ETC","L","WQ","MBP","FV"])):
               self.setBoneLimits(pose.bones[key.name])
 
         #Add drivers to the all the shape keys
         for key in shapeKeys:
-            if((key.name!="Basis") and (key.name[0:1]!="!")):
+            if((key.name[0:3]=="qt_") or (key.name in ["AI","O","E","U","ETC","L","WQ","MBP","FV"])):
               self.addDriver(key,key.name,armObj,pose.bones[key.name])
         
         #Restore the mode to how it was when we started.
@@ -386,7 +426,6 @@ class QuickTalk_Script:
       numFrames = bpy.context.scene.frame_end - bpy.context.scene.frame_start + 1
       numWords = self.getTotalWords()
       framesPerWord = numFrames/numWords
-      print("Frames Per Word:"+str(framesPerWord)+" ("+str(numFrames)+"/"+str(numWords)+")")
 
       #Switch to a timeline
       default_frame = bpy.context.scene.frame_current
@@ -399,7 +438,6 @@ class QuickTalk_Script:
         bpy.context.scene.frame_current = frame
         marker = bpy.ops.marker.add()
         bpy.ops.marker.rename(name=d['voice']+"!D")
-        print("Adding "+d['voice']+" at "+str(frame))
         frame = frame + framesPerWord*d['totalwords']
 
       bpy.context.scene.frame_current = default_frame
@@ -423,7 +461,6 @@ class QuickTalk_Script:
         if(m.name[-2:]=="!D"):
           frame = m.frame
           dialogueStarts.append(frame)
-          print(m.name+":"+str(frame))
       dialogueStarts.append(bpy.context.scene.frame_end)  #Fake one at the end of the scene
       dialogueStarts = sorted(dialogueStarts)
 
@@ -444,7 +481,6 @@ class QuickTalk_Script:
               marker = bpy.ops.marker.add()
               name=l[0][0:10]+"!L"
               bpy.ops.marker.rename(name=name)
-              print("Adding "+name+" at "+str(frame))
             frame = frame + framesPerWord*len(l)
            
      
@@ -470,7 +506,6 @@ class QuickTalk_Script:
         if((m.name[-2:]=="!D") or (m.name[-2:]=="!L")):
           frame = m.frame
           lineStarts.append(frame)
-          print(m.name+":"+str(frame))
       lineStarts.append(bpy.context.scene.frame_end)  #Fake one at the end of the scene
       lineStarts = sorted(lineStarts)
 
@@ -492,7 +527,6 @@ class QuickTalk_Script:
               marker = bpy.ops.marker.add()
               name=w[0:10]+"!W"
               bpy.ops.marker.rename(name=name)
-              print("Adding "+name+" at "+str(frame))
             frame = frame + framesPerWord
 
       bpy.context.scene.frame_current = default_frame
@@ -615,10 +649,14 @@ class QuickTalk_Script:
   #
   def plotDot(self,name,value,frame):
     if name in bpy.context.active_object.pose.bones:
-      bone = bpy.context.active_object.pose.bones[name]
-      bone.rotation_euler = (value,0,0)
-      bone.keyframe_insert("rotation_euler",0,frame,"QuickTalk")        #0=x, 1=y, 2=z
-      print("Plottted "+name+" at "+str(value)+" to "+str(frame))
+      if(bpy.context.scene.quicktalk_bone_option == "0"):
+        bone = bpy.context.active_object.pose.bones[name]
+        bone.rotation_euler = (value,0,0)
+        bone.keyframe_insert("rotation_euler",0,frame,"QuickTalk")        #0=x, 1=y, 2=z
+      else:
+        bone = bpy.context.active_object.pose.bones[name]
+        bone.location = (value,0,0)
+        bone.keyframe_insert("location",0,frame,"QuickTalk")        #0=x, 1=y, 2=z
     else:
       print("Can't find bone to plot "+name+" at "+str(value)+" to "+str(frame))
 
@@ -665,7 +703,6 @@ class QuickTalk_Script:
         if((m.name[-2:]=="!D") or (m.name[-2:]=="!L") or (m.name[-2:]=="!W")):
           frame = m.frame
           wordStarts.append(frame)
-          print(m.name+":"+str(frame))
       wordStarts.append(bpy.context.scene.frame_end)  #Fake one at the end of the scene
       wordStarts = sorted(wordStarts)
 
@@ -681,7 +718,7 @@ class QuickTalk_Script:
               if selectedobjectname[0:len(d['voice'])] == d['voice']:
                 self.plotWordToTimeline(w,startFrame,endFrame-startFrame)
               else:
-                print("Non-Matching character: "+selectedobjectname[0:len(d['voice'])]+":"+d['voice'])
+                print("Non-Matching speaker: "+selectedobjectname[0:len(d['voice'])]+":"+d['voice'])
 
       bpy.context.scene.frame_current = default_frame
       bpy.context.area.type = default_area
