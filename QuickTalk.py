@@ -335,7 +335,7 @@ class QuickTalk_BuildShapeKeyPanel(bpy.types.Operator):
         shapeKeys = shapeObj.data.shape_keys.key_blocks
         num = 0;
         for key in shapeKeys:
-            if((key.name[0:3]=="qt_") or (key.name in ["AI","O","E","U","ETC","L","WQ","MBP","FV"])):
+            if((key.name[0:3]=="qt_") or (key.name in ["AI","O","E","U","ETC","L","WQ","MBP","M","FV"])):
               self.addPanelBone(arm,panelroot,key.name,num)
               num=num+1
 
@@ -343,12 +343,12 @@ class QuickTalk_BuildShapeKeyPanel(bpy.types.Operator):
         bpy.ops.object.mode_set(mode='POSE') 
         pose = armObj.pose
         for key in shapeKeys:
-            if((key.name[0:3]=="qt_") or (key.name in ["AI","O","E","U","ETC","L","WQ","MBP","FV"])):
+            if((key.name[0:3]=="qt_") or (key.name in ["AI","O","E","U","ETC","L","WQ","MBP","M","FV"])):
               self.setBoneLimits(pose.bones[key.name])
 
         #Add drivers to the all the shape keys
         for key in shapeKeys:
-            if((key.name[0:3]=="qt_") or (key.name in ["AI","O","E","U","ETC","L","WQ","MBP","FV"])):
+            if((key.name[0:3]=="qt_") or (key.name in ["AI","O","E","U","ETC","L","WQ","MBP","M","FV"])):
               self.addDriver(key,key.name,armObj,pose.bones[key.name])
         
         #Restore the mode to how it was when we started.
@@ -648,13 +648,14 @@ class QuickTalk_Script:
   # Plot a single dot on a timeline
   #
   def plotDot(self,name,value,frame):
+    if((name=="MBP") and (not "MBP" in bpy.context.active_object.pose.bones)):
+        name="M"
     if name in bpy.context.active_object.pose.bones:
+      bone = bpy.context.active_object.pose.bones[name]
       if(bpy.context.scene.quicktalk_bone_option == "0"):
-        bone = bpy.context.active_object.pose.bones[name]
         bone.rotation_euler = (value,0,0)
         bone.keyframe_insert("rotation_euler",0,frame,"QuickTalk")        #0=x, 1=y, 2=z
       else:
-        bone = bpy.context.active_object.pose.bones[name]
         bone.location = (value,0,0)
         bone.keyframe_insert("location",0,frame,"QuickTalk")        #0=x, 1=y, 2=z
     else:
@@ -677,7 +678,7 @@ class QuickTalk_Script:
       phonemes = self.phoneme_dictionary[w.lower()] 
       if(length > len(phonemes) * 5):
         #Obviously this word has a gap after it, fix the length lower
-        length = len(phonemes) * 3;
+        length = len(phonemes) * 4;
    
       step = length/len(phonemes)
       current = frame-step/2
