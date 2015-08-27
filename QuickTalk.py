@@ -21,6 +21,8 @@
 #
 # First, make shape keys for the mouth shapes.
 # You'll need: AI, O, E, U, ETC, L, WQ, MBP, FV and the Basis should be a rest shape.
+# You can add a "TH" if you think that shape is important,
+# but if it's not there we'll just assume ETC when it comes up.
 #
 # Give it an armature if you don't already have one. It needs an armature to
 # attach to the shape keys.
@@ -335,7 +337,7 @@ class QuickTalk_BuildShapeKeyPanel(bpy.types.Operator):
         shapeKeys = shapeObj.data.shape_keys.key_blocks
         num = 0;
         for key in shapeKeys:
-            if((key.name[0:3]=="qt_") or (key.name in ["AI","O","E","U","ETC","L","WQ","MBP","M","FV"])):
+            if((key.name[0:3]=="qt_") or (key.name in ["AI","O","E","U","ETC","L","WQ","MBP","M","FV","TH"])):
               self.addPanelBone(arm,panelroot,key.name,num)
               num=num+1
 
@@ -343,12 +345,12 @@ class QuickTalk_BuildShapeKeyPanel(bpy.types.Operator):
         bpy.ops.object.mode_set(mode='POSE') 
         pose = armObj.pose
         for key in shapeKeys:
-            if((key.name[0:3]=="qt_") or (key.name in ["AI","O","E","U","ETC","L","WQ","MBP","M","FV"])):
+            if((key.name[0:3]=="qt_") or (key.name in ["AI","O","E","U","ETC","L","WQ","MBP","M","FV","TH"])):
               self.setBoneLimits(pose.bones[key.name])
 
         #Add drivers to the all the shape keys
         for key in shapeKeys:
-            if((key.name[0:3]=="qt_") or (key.name in ["AI","O","E","U","ETC","L","WQ","MBP","M","FV"])):
+            if((key.name[0:3]=="qt_") or (key.name in ["AI","O","E","U","ETC","L","WQ","MBP","M","FV","TH"])):
               self.addDriver(key,key.name,armObj,pose.bones[key.name])
         
         #Restore the mode to how it was when we started.
@@ -595,7 +597,7 @@ class QuickTalk_Script:
         "S":"ETC",
         "SH":"ETC",
         "T":"ETC",
-        "TH":"ETC",
+        "TH":"TH",
         "UH0":"U",
         "UH1":"U",
         "UH2":"U",
