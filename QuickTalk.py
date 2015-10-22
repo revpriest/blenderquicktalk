@@ -96,10 +96,10 @@
 bl_info = {
     "name": "QuickTalk Lipsyncher",
     "author": "Adam Priest - tentacles.org.uk ;)",
-    "version": (0, 0, 2),
+    "version": (1, 1, 0),
     "blender": (2, 7, 1),
     "location": "Object Panel",
-    "description": "A system for speeding up lip synch stuff by using markers and a phoneme dictionary",
+    "description": "A system for speeding up lip synch stuff by using markers and a phoneme dictionary. See http://tentacles.org.uk/quicktalk.",
     "warning": "",
     "wiki_url": "",
     "tracker_url": "",
