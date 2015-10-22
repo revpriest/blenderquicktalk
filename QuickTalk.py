@@ -612,6 +612,80 @@ class QuickTalk_Script:
         "ZH":"ETC",
         "E21":"E",
       }
+      #Alternate mappings for MHX2 import
+      if(bpy.context.scene.quicktalk_bone_option == "2"):
+        mappings = {
+          "AA0":"AH",
+          "AA1":"AH",
+          "AA2":"AH",
+          "AE0":"AH",
+          "AE1":"AH",
+          "AE2":"AH",
+          "AH0":"AH",
+          "AH1":"AH",
+          "AH2":"AH",
+          "AO0":"O",
+          "AO1":"O",
+          "AO2":"O",
+          "AW0":"O",
+          "AW1":"O",
+          "AW2":"O",
+          "AY0":"AH",
+          "AY1":"AH",
+          "AY2":"AH",
+          "B":"MBP",
+          "CH":"Etc",
+          "D":"Etc",
+          "DH":"Etc",
+          "EH0":"EH",
+          "EH1":"EH",
+          "EH2":"EH",
+          "ER0":"EH",
+          "ER1":"EH",
+          "ER2":"EH",
+          "EY0":"EE",
+          "EY1":"EE",
+          "EY2":"EE",
+          "F":"FV",
+          "G":"G",
+          "HH":"Etc",
+          "IH0":"AH",
+          "IH1":"AH",
+          "IH2":"AH",
+          "IY0":"EE",
+          "IY1":"EE",
+          "IY2":"EE",
+          "JH":"Etc",
+          "K":"Etc",
+          "L":"L",
+          "M":"MBP",
+          "N":"Etc",
+          "NG":"Etc",
+          "OW0":"O",
+          "OW1":"O",
+          "OW2":"O",
+          "OY0":"OO",
+          "OY1":"OO",
+          "OY2":"OO",
+          "P":"MBP",
+          "R":"R",
+          "S":"S",
+          "SH":"SH",
+          "T":"Etc",
+          "TH":"TH",
+          "UH0":"OO",
+          "UH1":"OO",
+          "UH2":"OO",
+          "UW0":"OO",
+          "UW1":"OO",
+          "UW2":"OO",
+          "V":"FV",
+          "W":"OO",
+          "Y":"Etc",
+          "Z":"Etc",
+          "ZH":"Etc",
+          "E21":"EE",
+        }
 
 
       inFile = open(bpy.path.abspath(bpy.context.scene.quicktalk_dict_file), 'r')
@@ -672,16 +746,6 @@ class QuickTalk_Script:
   def plotPhoneme(self,p,last,start,step):
     if(bpy.context.scene.quicktalk_bone_option == "2"):
       #MHX2-Imported Viseme buttons.
-      if(p=="AI"): p="AH"
-      if(p=="O"):p="O"
-      if(p=="E"):p="EE"
-      if(p=="U"):p="OO"
-      if(p=="ETC"):p="Etc"
-      if(p=="L"):p="L"
-      if(p=="WQ"):p="OO"
-      if(p=="MBP"):p="MBP"
-      if(p=="FV"):p="FV"
-      if(p=="TH"):p="TH"
       bpy.context.scene.frame_current = start;
       t = bpy.context.scene.tool_settings.use_keyframe_insert_auto;
       bpy.context.scene.tool_settings.use_keyframe_insert_auto=True;
