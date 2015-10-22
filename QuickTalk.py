@@ -135,7 +135,8 @@ def register():
     )
     bpy.types.Scene.quicktalk_bone_option = bpy.props.EnumProperty (
       items = (('0', 'X-Rotation', 'Create and move bones for X-Rotation'),    
-               ('1', 'X-Translation', 'Create and move bones for X-Translation')),
+               ('1', 'X-Translation', 'Create and move bones for X-Translation'),
+               ('2', 'MHX2 Visemes', 'Plot curves using MHX2 visemes for MHX2 imported models')),
       name = "Bone Option",
       default = "0",
       description = "Move/Make bones with rotation or translation?"
@@ -655,23 +656,45 @@ class QuickTalk_Script:
     if name in bpy.context.active_object.pose.bones:
       bone = bpy.context.active_object.pose.bones[name]
       if(bpy.context.scene.quicktalk_bone_option == "0"):
+        #X-Rotation
         bone.rotation_euler = (value,0,0)
         bone.keyframe_insert("rotation_euler",0,frame,"QuickTalk")        #0=x, 1=y, 2=z
-      else:
+      elif(bpy.context.scene.quicktalk_bone_option == "1"):
+        #X-Translation
         bone.location = (value,0,0)
         bone.keyframe_insert("location",0,frame,"QuickTalk")        #0=x, 1=y, 2=z
     else:
-      print("Can't find bone to plot "+name+" at "+str(value)+" to "+str(frame))
+        print("Can't find bone to plot "+name+" at "+str(value)+" to "+str(frame))
 
   ###
   # Plot a single phoneme to the timeline
   #
   def plotPhoneme(self,p,last,start,step):
-    if(p!=last):
-      ##Only turn it down if it wasn't the last phoneme
-      self.plotDot(p,0,int(start))
-    self.plotDot(p,1.571,int(start+step))
-    self.plotDot(p,0,int(start+step+step))
+    if(bpy.context.scene.quicktalk_bone_option == "2"):
+      #MHX2-Imported Viseme buttons.
+      if(p=="AI"): p="AH"
+      if(p=="O"):p="O"
+      if(p=="E"):p="EE"
+      if(p=="U"):p="OO"
+      if(p=="ETC"):p="Etc"
+      if(p=="L"):p="L"
+      if(p=="WQ"):p="OO"
+      if(p=="MBP"):p="MBP"
+      if(p=="FV"):p="FV"
+      if(p=="TH"):p="TH"
+      bpy.context.scene.frame_current = start;
+      t = bpy.context.scene.tool_settings.use_keyframe_insert_auto;
+      bpy.context.scene.tool_settings.use_keyframe_insert_auto=True;
+      bpy.ops.mhx2.set_viseme(viseme=p);
+      bpy.context.scene.tool_settings.use_keyframe_insert_auto=t;
+      return;
+    else:
+      #Rotate or Translate, plot actual timeline points...
+      if(p!=last):
+        ##Only turn it down if it wasn't the last phoneme
+        self.plotDot(p,0,int(start))
+      self.plotDot(p,1.571,int(start+step))
+      self.plotDot(p,0,int(start+step+step))
 
   ###
   # Plot a specific word at a specific place
@@ -689,6 +712,9 @@ class QuickTalk_Script:
         self.plotPhoneme(p,lastPhoneme,current,step)
         lastPhoneme = p
         current = current+step
+      if(bpy.context.scene.quicktalk_bone_option == "2"):
+        #Return to 'Rest' at the end of the word.
+        self.plotPhoneme("Rest",lastPhoneme,current,step);
             
 
   ###
@@ -714,6 +740,9 @@ class QuickTalk_Script:
       n=0;
       for d in self.dialogues:
           for l in d['lines']:
+            if(bpy.context.scene.quicktalk_bone_option == "2"):
+              #Start with a "Rest" if we're MXH2 import.
+              self.plotPhoneme("Rest","non",wordStarts[n]-3,3);
             for w in l:
               startFrame = wordStarts[n]
               n=n+1
