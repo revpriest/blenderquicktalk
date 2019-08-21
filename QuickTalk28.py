@@ -317,9 +317,9 @@ class QuickTalk_BuildShapeKeyPanel(bpy.types.Operator):
 
         #Get cursor location, relative to armature object
         #This is where we want the control panel rig to go.
-        x = scene.cursor_location[0]; 
-        y = scene.cursor_location[1]; 
-        z = scene.cursor_location[2]; 
+        x = bpy.context.scene.cursor.location[0];
+        y = bpy.context.scene.cursor.location[1];
+        z = bpy.context.scene.cursor.location[2];
         x = (x-armObj.location[0])/armObj.scale[0];
         y = (y-armObj.location[1])/armObj.scale[1];
         z = (z-armObj.location[2])/armObj.scale[2];
