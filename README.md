@@ -88,3 +88,17 @@ If all that sounds long-winded, you do not understand
 how damn tedious lip-synching is when you have
 to do it literally frame by frame. 
 
+## Versions / Install
+
+There's the original Quicktalk.py that you can install
+on blender before 2.8.
+
+There's a Quicktalk28.py for version 2.8 up to version 4.
+
+Quicktalk4.py is all you need for Blender 4 onwards.
+
+Just click "edit/preferences/Add-ons/Install and then
+pick the appropriate Quicktalk python file for your
+version of Blender. Remember the check the box to
+actually activate the installed plugin.
+
